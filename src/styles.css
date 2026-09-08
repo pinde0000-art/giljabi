@@ -356,6 +356,7 @@ input {
   flex: 1 1 auto;
 }
 .dd-item .t1 {
+  display: block;
   font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.3px;
@@ -367,6 +368,7 @@ input {
   font-weight: 700;
 }
 .dd-item .t2 {
+  display: block;
   font-size: 12px;
   color: var(--fg-mute);
   margin-top: 2px;

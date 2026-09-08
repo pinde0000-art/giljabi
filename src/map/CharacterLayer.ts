@@ -270,7 +270,7 @@ export class CharacterLayer implements CustomLayerInterface {
     const mPerPx =
       (40075016.686 * Math.cos((this.position[1] * Math.PI) / 180)) /
       (512 * Math.pow(2, zoom));
-    const targetPx = 46;
+    const targetPx = 58;
     const boost = Math.max(1, Math.min(7, (targetPx * mPerPx) / 1.75));
     const scale = mc.meterInMercatorCoordinateUnits() * boost;
 
