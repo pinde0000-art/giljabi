@@ -313,8 +313,7 @@ export const useStore = create<Store>((set, get) => ({
                 road: walk,
                 phase: "result",
                 fitSignal: get().fitSignal + 1,
-                notice:
-                  "이 구간은 버스로 이어지는 노선을 찾지 못했어요. 대신 걸어가는 길을 안내합니다.",
+                notice: `${e.message} 도보 경로로 안내할게요.`,
               });
               void buildElevationProfile(walk.geometry).then((p) => {
                 if (!ac.signal.aborted && p) set({ elev: p });
@@ -326,8 +325,9 @@ export const useStore = create<Store>((set, get) => ({
           }
         }
 
-        // 노선 데이터가 없는 지역이면 정류장이라도 찍어준다
-        if (e.code === "no_lines" || e.code === "no_route") {
+        // 정류장 표시는 OSM 엔진이 실제로 훑어본 경우에만 (info 가 그때만 채워진다).
+        // MOTIS 가 "편이 없다" 고 한 경우까지 Overpass 를 또 때리면 느리기만 하다.
+        if (e.info && (e.code === "no_lines" || e.code === "no_route")) {
           try {
             const stops = await nearbyStops(origin.coord, 1000, ac.signal);
             if (!ac.signal.aborted) set({ fallbackStops: stops });
@@ -401,7 +401,7 @@ export const useStore = create<Store>((set, get) => ({
     const nav = get().nav;
     const leg = plan?.legs[nav.legIndex];
     set({ nav: { ...nav, onboard: true, alertedAlight: false } });
-    if (leg?.ref) get().toast_(`${leg.ref} 승차. ${leg.to.name} 에서 내리세요.`);
+    if (leg?.ref) get().toast_(`${leg.ref} 승차. ${leg.to.name}에서 내리세요.`);
   },
 
   alight: () => {
@@ -452,7 +452,7 @@ export const useStore = create<Store>((set, get) => ({
       const fast = (f.speed ?? 0) > 4.2;
       if ((nearStop && fast) || movedIn) {
         set({ nav: { ...nav, onboard: true, alertedAlight: false } });
-        st.toast_(`${leg.ref} 승차 확인. ${leg.to.name} 에서 내리세요.`);
+        st.toast_(`${leg.ref} 승차 확인. ${leg.to.name}에서 내리세요.`);
       }
       return;
     }

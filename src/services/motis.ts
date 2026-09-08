@@ -220,6 +220,8 @@ export interface MotisOptions {
   /** 출발 시각 (기본: 지금) */
   time?: Date;
   count?: number;
+  /** 검색 창(초). 넓히면 대안이 늘고, 배차가 긴 노선도 잡힌다. */
+  searchWindow?: number;
 }
 
 export async function planTransitMotis(
@@ -234,6 +236,7 @@ export async function planTransitMotis(
   url.searchParams.set("numItineraries", String(opts.count ?? 4));
   if (opts.busOnly) url.searchParams.set("transitModes", "BUS,TRAM,COACH");
   if (opts.time) url.searchParams.set("time", opts.time.toISOString());
+  if (opts.searchWindow) url.searchParams.set("searchWindow", String(opts.searchWindow));
 
   let res: Response;
   try {

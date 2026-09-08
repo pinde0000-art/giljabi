@@ -82,7 +82,7 @@ async function overpass(query: string, signal?: AbortSignal): Promise<any> {
   if (cached) return cached;
 
   const STAGGER = 6500;
-  const OVERALL = 70000;
+  const OVERALL = 30000;
 
   const run = (async () => {
     const ac = new AbortController();
