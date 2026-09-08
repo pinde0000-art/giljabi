@@ -3,6 +3,7 @@ import MapView from "./map/MapView";
 import PlaceFields, { pushRecent } from "./ui/PlaceFields";
 import ResultPanel, { ModeIcon, MODE_LABEL } from "./ui/ResultPanel";
 import DevSim from "./ui/DevSim";
+import InstallHint from "./ui/InstallHint";
 import { IcArrow, IcTarget } from "./ui/Icons";
 import { useStore } from "./state/store";
 import { positionSource } from "./services/geolocation";
@@ -209,6 +210,7 @@ export default function App() {
         )}
 
         {!picking && <ResultPanel />}
+        {!picking && phase === "idle" && <InstallHint />}
         {toast && <div className="toast">{toast}</div>}
         {import.meta.env.DEV && !picking && <DevSim />}
       </div>

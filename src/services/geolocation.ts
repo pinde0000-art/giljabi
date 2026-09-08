@@ -86,18 +86,32 @@ class PositionSource {
   }
 }
 
+const isIOS = () =>
+  typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isStandalone = () =>
+  typeof window !== "undefined" &&
+  ((navigator as unknown as { standalone?: boolean }).standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)").matches === true);
+
 function describe(err: GeolocationPositionError): string {
   switch (err.code) {
     case err.PERMISSION_DENIED:
-      return "위치 접근이 거부됐습니다. 설정 > Safari > 위치 에서 허용해 주세요.";
+      if (isIOS()) {
+        return isStandalone()
+          ? "위치 접근이 거부됐습니다. 설정 > 개인 정보 보호 및 보안 > 위치 서비스 에서 이 앱을 허용해 주세요. (홈 화면 앱은 권한을 따로 가집니다)"
+          : "위치 접근이 거부됐습니다. 설정 > Safari > 위치 를 '확인' 이나 '허용' 으로 바꾼 뒤 페이지를 새로고침해 주세요.";
+      }
+      return "위치 접근이 거부됐습니다. 브라우저 주소창의 자물쇠 아이콘에서 위치를 허용해 주세요.";
     case err.POSITION_UNAVAILABLE:
       return "지금은 위치를 확인할 수 없습니다. 실외로 나가거나 잠시 후 다시 시도해 주세요.";
     case err.TIMEOUT:
-      return "위치를 가져오는 데 너무 오래 걸립니다.";
+      return "위치를 가져오는 데 너무 오래 걸립니다. 실외에서 다시 시도해 주세요.";
     default:
       return "위치를 가져오지 못했습니다.";
   }
 }
+
+export { isIOS, isStandalone };
 
 export const positionSource = new PositionSource();
 

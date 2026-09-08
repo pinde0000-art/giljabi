@@ -58,6 +58,9 @@ function devRafShim(): Plugin {
 }
 
 export default defineConfig({
+  // 상대 경로로 빌드해 두면 GitHub Pages 처럼 하위 경로(/저장소이름/)에 올려도
+  // 자산·워커·매니페스트가 전부 그대로 맞는다.
+  base: "./",
   plugins: [react(), maplibreWorkerAssets(), devRafShim()],
   optimizeDeps: {
     exclude: ["maplibre-gl"],

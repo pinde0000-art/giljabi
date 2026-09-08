@@ -43,6 +43,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
@@ -57,8 +61,26 @@ body {
   font-family: var(--font);
   font-size: 15px;
   line-height: 1.45;
-  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+
+  /* iOS: 고무줄 스크롤과 더블탭 확대를 막고, 길게 눌렀을 때 뜨는
+     "이미지 저장 / 복사" 팝업도 지도 위에서는 방해만 되므로 끈다. */
+  overscroll-behavior: none;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 글자를 고를 수 있어야 하는 곳만 예외 */
+input,
+textarea,
+.panel-scroll,
+.loc-addr,
+.step-body {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 button,
@@ -83,6 +105,9 @@ input {
 /* ---------- 앱 셸 ---------- */
 .app {
   height: 100%;
+  /* 사파리 주소창/툴바가 차지하는 만큼을 뺀 실제 보이는 높이.
+     지원 안 하는 브라우저는 위의 100% 로 떨어진다. */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -990,4 +1015,64 @@ input {
   color: #fff;
   font-size: 14px;
   font-weight: 800;
+}
+
+/* ---------- 홈 화면에 추가 안내 (아이폰 사파리 전용) ---------- */
+.install-hint {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--safe-bottom) + 12px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 13px 13px 12px;
+  border-radius: var(--r-md);
+  background: rgba(20, 20, 26, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+  animation: pop 0.25s ease-out;
+}
+.ih-ic {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--grad);
+  color: #fff;
+}
+.ih-tx {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+}
+.ih-tx > b {
+  font-size: 13.5px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.ih-tx b {
+  color: #fff;
+  font-weight: 700;
+}
+.ih-close {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2a2a34;
+  color: var(--fg-dim);
+  display: grid;
+  place-items: center;
 }
