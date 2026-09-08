@@ -53,11 +53,19 @@ interface Store {
   /** 노선 데이터가 없을 때 대신 보여줄 주변 정류장 */
   fallbackStops: BusStop[];
 
+  /** 지도에서 출발지를 직접 찍는 중인지 */
+  picking: boolean;
+  pickCoord: LngLat | null;
+  pickAddr: { name: string; detail: string } | null;
+
   nav: NavState;
   follow: boolean;
   toast: string | null;
   /** 지도를 경로 전체에 맞춰야 한다는 신호 (증가할 때마다 MapView 가 반응) */
   fitSignal: number;
+  /** 지도를 특정 지점으로 옮기라는 신호 */
+  focusCoord: LngLat | null;
+  focusSignal: number;
 
   setMode: (m: TravelMode) => void;
   setDim: (d: MapDim) => void;
@@ -68,6 +76,10 @@ interface Store {
   toast_: (msg: string | null) => void;
 
   locateMe: () => Promise<Place | null>;
+  startPick: () => void;
+  cancelPick: () => void;
+  setPickCoord: (c: LngLat) => void;
+  confirmPick: () => Promise<void>;
   plan: () => Promise<void>;
   reset: () => void;
   selectPlan: (i: number) => void;
@@ -103,10 +115,16 @@ export const useStore = create<Store>((set, get) => ({
   planIndex: 0,
   fallbackStops: [],
 
+  picking: false,
+  pickCoord: null,
+  pickAddr: null,
+
   nav: { active: false, legIndex: 0, onboard: false, alertedAlight: false },
   follow: false,
   toast: null,
   fitSignal: 0,
+  focusCoord: null,
+  focusSignal: 0,
 
   setMode: (m) => {
     if (get().mode === m) return;
@@ -148,17 +166,28 @@ export const useStore = create<Store>((set, get) => ({
     try {
       const fix = await getCurrentFix();
       set({ fix });
-      let name = "현재 위치";
+      // 이름은 반드시 "현재 위치" 로 둔다. 역지오코딩이 주는 지물 이름을 그대로
+      // 쓰면 근처 가게 이름이 붙어서 엉뚱한 데를 잡은 것처럼 보인다.
       let detail = `${fix.coord[1].toFixed(5)}, ${fix.coord[0].toFixed(5)}`;
       try {
         const g = await reverseGeocode(fix.coord);
-        name = g.name;
-        detail = g.detail || detail;
+        detail = g.detail || g.name || detail;
       } catch {
         /* 주소를 못 얻어도 좌표로 진행 */
       }
-      const place: Place = { name, detail, coord: fix.coord, isCurrent: true };
-      set({ origin: place, locating: false, phase: "idle", road: null, transit: null, error: null });
+      const place: Place = { name: "현재 위치", detail, coord: fix.coord, isCurrent: true };
+      set({
+        origin: place,
+        locating: false,
+        phase: "idle",
+        road: null,
+        transit: null,
+        error: null,
+        notice: null,
+        // 지도를 그리로 옮겨서, 엉뚱한 데를 잡았으면 바로 눈에 띄게 한다
+        focusCoord: fix.coord,
+        focusSignal: get().focusSignal + 1,
+      });
       return place;
     } catch (e) {
       set({
@@ -172,6 +201,66 @@ export const useStore = create<Store>((set, get) => ({
       });
       return null;
     }
+  },
+
+  startPick: () => {
+    const s = get();
+    const seed = s.origin?.coord ?? s.fix?.coord ?? null;
+    set({ picking: true, pickCoord: seed, pickAddr: null, follow: false });
+  },
+
+  cancelPick: () => set({ picking: false, pickCoord: null, pickAddr: null }),
+
+  setPickCoord: (c) => {
+    if (!get().picking) return;
+    set({ pickCoord: c, pickAddr: null });
+    // 지도를 멈춘 뒤 한 번만 주소를 물어본다
+    const mine = c;
+    window.setTimeout(async () => {
+      if (!get().picking) return;
+      const now = get().pickCoord;
+      if (!now || now[0] !== mine[0] || now[1] !== mine[1]) return;
+      try {
+        const g = await reverseGeocode(mine);
+        const still = get().pickCoord;
+        if (get().picking && still && still[0] === mine[0] && still[1] === mine[1]) {
+          set({ pickAddr: g });
+        }
+      } catch {
+        /* 주소를 못 얻어도 좌표로 지정할 수 있다 */
+      }
+    }, 650);
+  },
+
+  async confirmPick() {
+    const { pickCoord, pickAddr } = get();
+    if (!pickCoord) return;
+    let detail = pickAddr?.detail;
+    if (!detail) {
+      try {
+        detail = (await reverseGeocode(pickCoord)).detail;
+      } catch {
+        detail = undefined;
+      }
+    }
+    set({
+      origin: {
+        name: "지도에서 지정한 위치",
+        detail: detail || `${pickCoord[1].toFixed(5)}, ${pickCoord[0].toFixed(5)}`,
+        coord: pickCoord,
+      },
+      picking: false,
+      pickCoord: null,
+      pickAddr: null,
+      phase: "idle",
+      road: null,
+      elev: null,
+      transit: null,
+      error: null,
+      notice: null,
+      focusCoord: pickCoord,
+      focusSignal: get().focusSignal + 1,
+    });
   },
 
   async plan() {

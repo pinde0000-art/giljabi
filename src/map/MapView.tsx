@@ -67,6 +67,8 @@ export default function MapView() {
   const fitSignal = useStore((s) => s.fitSignal);
   const fallbackStops = useStore((s) => s.fallbackStops);
   const phase = useStore((s) => s.phase);
+  const picking = useStore((s) => s.picking);
+  const focusSignal = useStore((s) => s.focusSignal);
 
   /* ---------------- 초기화 ---------------- */
   useEffect(() => {
@@ -610,6 +612,34 @@ export default function MapView() {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitSignal]);
+
+  /* 특정 지점으로 지도 옮기기 (현재 위치 잡기 / 지도에서 찍기 확정) */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || focusSignal === 0) return;
+    const c = useStore.getState().focusCoord;
+    if (!c) return;
+    map.easeTo({ center: c, zoom: Math.max(map.getZoom(), 16.2), duration: 800 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSignal]);
+
+  /* 지도에서 출발지 찍기 — 지도를 멈출 때마다 중심 좌표를 스토어로 */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !picking) return;
+    const push = () => {
+      const c = map.getCenter();
+      useStore.getState().setPickCoord([c.lng, c.lat]);
+    };
+    // 시작할 때 이미 정해둔 좌표가 있으면 거기로 옮긴다
+    const seed = useStore.getState().pickCoord;
+    if (seed) map.easeTo({ center: seed, zoom: Math.max(map.getZoom(), 16.5), duration: 500 });
+    else push();
+    map.on("moveend", push);
+    return () => {
+      map.off("moveend", push);
+    };
+  }, [picking]);
 
   /* 캐릭터 위치 / 카메라 추적 */
   const prevFix = useRef<LngLat | null>(null);

@@ -154,3 +154,10 @@ export const IcTrain = ({ size = 18 }: P) => (
     <path d="M9 6.6h6" />
   </svg>
 );
+
+export const IcMapPin = ({ size = 18 }: P) => (
+  <svg {...base(size)}>
+    <path d="M4 7.4l5-2.2 6 2.6 5-2.2v11l-5 2.2-6-2.6-5 2.2v-11z" />
+    <path d="M9 5.2v13.6M15 7.8v13" />
+  </svg>
+);

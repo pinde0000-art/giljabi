@@ -101,8 +101,15 @@ function describe(err: GeolocationPositionError): string {
 
 export const positionSource = new PositionSource();
 
-/** 한 번만 위치를 받아온다 */
-export function getCurrentFix(timeoutMs = 15000): Promise<Fix> {
+/**
+ * 위치를 한 번 받아온다.
+ *
+ * 첫 응답은 와이파이/기지국 기반이라 오차가 수백 m~수 km 인 경우가 흔하다.
+ * (실내나 PC 에서는 아예 다른 동네가 찍히기도 한다.)
+ * 그래서 잠깐 더 지켜보면서 오차가 가장 작은 측정치를 고른다.
+ * 오차 25m 안쪽이면 더 기다리지 않고 바로 반환한다.
+ */
+export function getCurrentFix(timeoutMs = 20000, refineMs = 5000): Promise<Fix> {
   if (positionSource.isMocked && positionSource.last) {
     return Promise.resolve(positionSource.last);
   }
@@ -111,17 +118,47 @@ export function getCurrentFix(timeoutMs = 15000): Promise<Fix> {
       reject(new Error("이 브라우저에서는 위치 기능을 쓸 수 없습니다."));
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (p) =>
-        resolve({
+
+    let best: Fix | null = null;
+    let done = false;
+    let watchId: number | null = null;
+    let refineTimer: number | null = null;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (refineTimer !== null) window.clearTimeout(refineTimer);
+      if (best) resolve(best);
+      else reject(new Error("위치를 가져오지 못했습니다."));
+    };
+
+    watchId = navigator.geolocation.watchPosition(
+      (p) => {
+        const fix: Fix = {
           coord: [p.coords.longitude, p.coords.latitude],
-          accuracy: p.coords.accuracy ?? 30,
+          accuracy: p.coords.accuracy ?? 9999,
           heading: Number.isFinite(p.coords.heading as number) ? (p.coords.heading as number) : null,
           speed: Number.isFinite(p.coords.speed as number) ? (p.coords.speed as number) : null,
           at: p.timestamp,
-        }),
-      (err) => reject(new Error(describe(err))),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: timeoutMs }
+        };
+        if (!best || fix.accuracy < best.accuracy) best = fix;
+        // 충분히 정확하면 더 기다릴 이유가 없다
+        if (fix.accuracy <= 25) finish();
+        else if (refineTimer === null) refineTimer = window.setTimeout(finish, refineMs);
+      },
+      (err) => {
+        if (best) finish();
+        else {
+          done = true;
+          if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+          if (refineTimer !== null) window.clearTimeout(refineTimer);
+          reject(new Error(describe(err)));
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs }
     );
+
+    window.setTimeout(finish, timeoutMs);
   });
 }

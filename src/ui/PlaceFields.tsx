@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Place } from "../types";
 import { searchPlaces } from "../services/geocode";
 import { useStore } from "../state/store";
-import { IcClose, IcHistory, IcPin, IcSearch, IcSwap, IcTarget } from "./Icons";
+import { IcClose, IcHistory, IcMapPin, IcPin, IcSearch, IcSwap, IcTarget } from "./Icons";
 
 const RECENT_KEY = "giljabi.recent.v1";
 
@@ -62,6 +62,7 @@ function Field({
 
   const locating = useStore((s) => s.locating);
   const locateMe = useStore((s) => s.locateMe);
+  const startPick = useStore((s) => s.startPick);
   const fix = useStore((s) => s.fix);
 
   // 입력 디바운스 검색
@@ -167,6 +168,26 @@ function Field({
                 <span className="t2">
                   {locating ? "GPS 신호를 기다리고 있어요" : "지금 서 있는 곳을 출발지로 씁니다"}
                 </span>
+              </span>
+            </button>
+          )}
+
+          {role === "origin" && (
+            <button
+              className="dd-item"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => {
+                startPick();
+                onClose();
+                inputRef.current?.blur();
+              }}
+            >
+              <span className="ic">
+                <IcMapPin />
+              </span>
+              <span className="tx">
+                <span className="t1">지도에서 직접 찍기</span>
+                <span className="t2">위치가 잘못 잡혔을 때 지도를 움직여 맞춥니다</span>
               </span>
             </button>
           )}

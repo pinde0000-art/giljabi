@@ -28,6 +28,12 @@ export default function App() {
   const onFix = useStore((s) => s.onFix);
   const locateMe = useStore((s) => s.locateMe);
   const fix = useStore((s) => s.fix);
+  const picking = useStore((s) => s.picking);
+  const pickAddr = useStore((s) => s.pickAddr);
+  const pickCoord = useStore((s) => s.pickCoord);
+  const startPick = useStore((s) => s.startPick);
+  const cancelPick = useStore((s) => s.cancelPick);
+  const confirmPick = useStore((s) => s.confirmPick);
 
   const [resolving, setResolving] = useState(false);
 
@@ -111,7 +117,23 @@ export default function App() {
         {!hasResult && (
           <>
             <PlaceFields />
-            <button className="cta" onClick={onSubmit} disabled={resolving}>
+
+            {origin?.isCurrent && (
+              <div className="loc-note">
+                <span className="loc-addr">{origin.detail}</span>
+                {fix && fix.accuracy > 300 && (
+                  <span className="loc-warn">
+                    오차 약 {Math.round(fix.accuracy)}m — 실내나 PC 에서는 위치가 크게
+                    빗나갈 수 있어요.
+                  </span>
+                )}
+                <button className="loc-fix" onClick={startPick}>
+                  지도에서 맞추기
+                </button>
+              </div>
+            )}
+
+            <button className="cta" onClick={onSubmit} disabled={resolving || picking}>
               {resolving && <span className="spinner" />}
               경로 찾기
               <IcArrow size={17} />
@@ -157,9 +179,38 @@ export default function App() {
           </div>
         </div>
 
-        <ResultPanel />
+        {picking && (
+          <>
+            <div className="pick-cross" aria-hidden>
+              <span className="ring" />
+              <span className="dot" />
+              <span className="stem" />
+            </div>
+            <div className="pick-bar">
+              <div className="pick-tx">
+                <b>출발지를 지도에서 맞춰 주세요</b>
+                <span>
+                  {pickAddr?.detail ??
+                    (pickCoord
+                      ? `${pickCoord[1].toFixed(5)}, ${pickCoord[0].toFixed(5)}`
+                      : "지도를 움직이면 주소가 나옵니다")}
+                </span>
+              </div>
+              <div className="pick-btns">
+                <button className="pick-cancel" onClick={cancelPick}>
+                  취소
+                </button>
+                <button className="pick-ok" onClick={() => void confirmPick()}>
+                  이 위치로
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!picking && <ResultPanel />}
         {toast && <div className="toast">{toast}</div>}
-        {import.meta.env.DEV && <DevSim />}
+        {import.meta.env.DEV && !picking && <DevSim />}
       </div>
     </div>
   );
